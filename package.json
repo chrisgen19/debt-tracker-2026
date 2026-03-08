@@ -5,11 +5,13 @@
     "scripts": {
         "dev": "next dev",
         "build": "prisma generate && next build",
+        "build:vercel": "prisma generate && prisma migrate deploy && next build",
         "start": "next start",
         "lint": "next lint",
         "db:generate": "bunx prisma generate",
         "db:push": "bunx prisma db push",
         "db:migrate": "bunx prisma migrate dev",
+        "db:migrate:deploy": "bunx prisma migrate deploy",
         "db:seed": "bunx prisma db seed",
         "db:studio": "bunx prisma studio"
     },
