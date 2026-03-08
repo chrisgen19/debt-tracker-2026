@@ -3,17 +3,29 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`[seed] Missing required environment variable: ${name}`);
+  }
+  return value;
+}
+
 async function main() {
   console.log("Seeding database...");
 
+  const seedUserEmail = requireEnv("SEED_USER_EMAIL");
+  const seedUserPassword = requireEnv("SEED_USER_PASSWORD");
+  const seedUserName = process.env.SEED_USER_NAME?.trim() || "Seed User";
+
   // Create default user
-  const hashedPassword = await bcrypt.hash("change-me", 12);
+  const hashedPassword = await bcrypt.hash(seedUserPassword, 12);
   const user = await prisma.user.upsert({
-    where: { email: "seed-user@example.com" },
-    update: { password: hashedPassword },
+    where: { email: seedUserEmail },
+    update: { name: seedUserName, password: hashedPassword },
     create: {
-      name: "Christian Genesis",
-      email: "seed-user@example.com",
+      name: seedUserName,
+      email: seedUserEmail,
       password: hashedPassword,
     },
   });
@@ -254,7 +266,7 @@ async function main() {
 
   console.log("Security Bank Platinum seeded");
   console.log("\nSeed complete!");
-  console.log("Login: seed-user@example.com / change-me");
+  console.log(`Seed user email: ${seedUserEmail}`);
 }
 
 main()

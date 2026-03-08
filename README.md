@@ -84,7 +84,7 @@ bun install
 
 # Set up environment variables
 cp .env.local.example .env.local
-# Edit .env.local with your DATABASE_URL and AUTH_SECRET
+# Edit .env.local with your DATABASE_URL, AUTH_SECRET, and seed user vars
 
 # Push schema to database
 bun run db:push
@@ -108,6 +108,9 @@ Open [http://localhost:3000](http://localhost:3000)
 | `DATABASE_URL` | PostgreSQL connection string |
 | `AUTH_SECRET` | Random secret for NextAuth (`openssl rand -base64 32`) |
 | `NEXTAUTH_URL` | App URL (default: `http://localhost:3000`) |
+| `SEED_USER_EMAIL` | Login email created/updated by `bun run db:seed` |
+| `SEED_USER_PASSWORD` | Login password used by `bun run db:seed` |
+| `SEED_USER_NAME` | Display name for the seeded user (optional) |
 
 ## Scripts
 
