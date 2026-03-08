@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  creditCards CreditCard[]
+
+  @@map("users")
+}
+
+model CreditCard {
+  id              String @id @default(cuid())
+  userId          String @map("user_id")
+  name            String
+  bankName        String @map("bank_name")
+  creditLimit     Float  @map("credit_limit")
+  currentBalance  Float  @map("current_balance")
+  interestRate    Float  @map("interest_rate") // Monthly rate as decimal (e.g. 0.03 = 3%)
+  computation     String // "BPI" or "STANDARD"
+  minPayment      Float  @map("min_payment")
+  targetPayment   Float  @map("target_payment")
+  color           String @default("#3b82f6")
+  statementDay    Int    @default(9) @map("statement_day")
+  dueDateDay      Int    @default(2) @map("due_date_day")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  statements   MonthlyStatement[]
+  overrides    MonthlyOverride[]
+
+  @@map("credit_cards")
+}
+
+model MonthlyStatement {
+  id              String   @id @default(cuid())
+  creditCardId    String   @map("credit_card_id")
+  month           Int      // 1-12
+  year            Int
+  statementDate   DateTime @map("statement_date")
+  dueDate         DateTime @map("due_date")
+  previousBalance Float    @map("previous_balance")
+  payments        Float    @default(0)
+  purchases       Float    @default(0)
+  interestCharged Float    @default(0) @map("interest_charged")
+  fees            Float    @default(0)
+  endingBalance   Float    @map("ending_balance")
+  minimumDue      Float    @map("minimum_due")
+  isPaid          Boolean  @default(false) @map("is_paid")
+  amountPaid      Float    @default(0) @map("amount_paid")
+  notes           String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  creditCard   CreditCard    @relation(fields: [creditCardId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@unique([creditCardId, month, year])
+  @@map("monthly_statements")
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  statementId String   @map("statement_id")
+  date        DateTime
+  postDate    DateTime @map("post_date")
+  description String
+  amount      Float
+  type        String   // "purchase", "payment", "interest", "fee"
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  statement MonthlyStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}
+
+model MonthlyOverride {
+  id           String @id @default(cuid())
+  creditCardId String @map("credit_card_id")
+  monthNumber  Int    @map("month_number") // Projection month (1, 2, 3...)
+  payment      Float? // Custom payment amount for this month
+  purchases    Float? // Expected new purchases for this month
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  creditCard CreditCard @relation(fields: [creditCardId], references: [id], onDelete: Cascade)
+
+  @@unique([creditCardId, monthNumber])
+  @@map("monthly_overrides")
+}

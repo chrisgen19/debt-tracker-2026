@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bun:*)",
+      "Bash(psql:*)",
+      "WebSearch",
+      "WebFetch(domain:authjs.dev)",
+      "Bash(bunx create-next-app@latest:*)",
+      "Bash(cp:*)",
+      "Bash(bunx prisma:*)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs",
+      "Bash(bunx tsc:*)",
+      "Bash(node:*)",
+      "Bash(rm:*)",
+      "Bash(curl:*)",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_click",
+      "mcp__plugin_playwright_playwright__browser_fill_form",
+      "mcp__plugin_playwright_playwright__browser_type",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "Bash(pkill:*)",
+      "Bash(git add:*)",
+      "Bash(DATABASE_URL=\"postgres://myuser:mypassword@localhost:5432/debttracker2026\" bunx prisma:*)",
+      "Bash(DATABASE_URL=\"postgres://myuser:mypassword@localhost:5432/debttracker2026\" bun:*)",
+      "Bash(openssl rand:*)",
+      "Bash(git init:*)"
+    ]
+  }
+}
