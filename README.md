@@ -35,11 +35,28 @@ A personal credit card debt tracking app built to help you visualize, plan, and 
 - Shows the exact month you become debt-free
 
 ### Record Monthly Statement (Real Data)
-- Log your actual credit card bill each month
-- Fields: previous balance, payments, purchases, interest, fees, ending balance, minimum due
-- Track payment status (paid/pending)
-- Card balance auto-updates when you save a statement
-- Full statement history table with color-coded status
+
+The **Record Statement** is where you log your actual monthly credit card bill each time you receive it. Think of it as your real-world ledger — every month when BPI or Security Bank sends you a Statement of Account (like PDF bills), you enter the numbers here.
+
+#### Statement Fields
+
+| Field | What it is | BPI Example (Feb 2026) | Security Bank Example (Feb 2026) |
+|---|---|---|---|
+| **Month / Year** | The billing period | February 2026 | February 2026 |
+| **Previous Balance** | Balance from last month's statement | ₱71,949.15 | ₱125,917.04 |
+| **Ending Balance** | The new total you owe (Total Amount Due) | ₱71,650.70 | ₱133,820.73 |
+| **Payments Made** | How much you paid last month | ₱2,570.00 | ₱3,780.00 |
+| **Purchases** | New charges/spending this cycle | ₱0.00 | ₱7,825.75 (Apple, Uniqlo, Grab, etc.) |
+| **Interest Charged** | Finance charge the bank added | ₱2,271.55 | ₱3,857.94 |
+| **Fees** | Late fees, annual fees, etc. | ₱0.00 | ₱0.00 |
+| **Minimum Due** | The minimum the bank requires you to pay | ₱2,558.95 | ₱4,014.62 |
+| **Amount Paid** | What you actually paid (fill after you pay) | — | — |
+| **Mark as Paid** | Check this after you've made payment | — | — |
+| **Notes** | Any reminder for yourself | "Finance charge ₱2,271.55" | "Purchases: Apple, Grab..." |
+
+This builds your **Statement History** table over time, so you can see your actual debt journey month by month — how much you're really paying, how much interest is eating into your payments, and whether your balance is actually going down.
+
+The **Interactive Ledger** below it is the opposite — it's a *projection* of the future based on your target payment. The statements are your *real* past data.
 
 ### Projection Engine
 Two bank-specific interest computation methods:
