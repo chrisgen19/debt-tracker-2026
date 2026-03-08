@@ -24,7 +24,10 @@
       "Bash(DATABASE_URL=\"postgres://myuser:mypassword@localhost:5432/debttracker2026\" bunx prisma:*)",
       "Bash(DATABASE_URL=\"postgres://myuser:mypassword@localhost:5432/debttracker2026\" bun:*)",
       "Bash(openssl rand:*)",
-      "Bash(git init:*)"
+      "Bash(git init:*)",
+      "Bash(git commit:*)",
+      "Bash(git:*)",
+      "Bash(lsof:*)"
     ]
   }
 }
