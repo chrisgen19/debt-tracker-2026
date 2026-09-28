@@ -2,7 +2,18 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { creditCardSchema, overrideSchema, statementSchema } from "@/schemas/card";
+import {
+  creditCardSchema,
+  overrideSchema,
+  statementSchema,
+  transactionSchema,
+  transactionUpdateSchema,
+} from "@/schemas/card";
+import {
+  computeEndingBalance,
+  summarizeTransactions,
+  toSignedAmount,
+} from "@/lib/statement-totals";
 import { revalidatePath } from "next/cache";
 
 async function getUserId(): Promise<string> {
@@ -155,13 +166,137 @@ export async function saveStatement(data: Record<string, unknown>) {
     create: parsed.data,
   });
 
-  // Also update the card's current balance to match ending balance
-  await prisma.creditCard.update({
-    where: { id: parsed.data.creditCardId },
-    data: { currentBalance: parsed.data.endingBalance },
-  });
+  // Sync the card's balance only from its latest statement, so editing an
+  // older month doesn't roll the current balance back
+  if (await isLatestStatement(parsed.data.creditCardId, statement.id)) {
+    await prisma.creditCard.update({
+      where: { id: parsed.data.creditCardId },
+      data: { currentBalance: parsed.data.endingBalance },
+    });
+  }
 
   revalidatePath("/dashboard");
   revalidatePath(`/cards/${parsed.data.creditCardId}`);
   return { success: true, statementId: statement.id };
+}
+
+export async function deleteStatement(id: string) {
+  const userId = await getUserId();
+  const statement = await getOwnedStatement(id, userId);
+  if (!statement) return { error: "Statement not found" };
+
+  // Transactions are removed via onDelete: Cascade; card balance is left as-is
+  await prisma.monthlyStatement.delete({ where: { id } });
+
+  revalidatePath("/dashboard");
+  revalidatePath(`/cards/${statement.creditCardId}`);
+  return { success: true };
+}
+
+/** Replaces a statement's totals and ending balance with its itemized sums. */
+export async function syncStatementTotals(statementId: string) {
+  const userId = await getUserId();
+  const statement = await prisma.monthlyStatement.findFirst({
+    where: { id: statementId, creditCard: { userId } },
+    include: { transactions: { select: { amount: true, type: true } } },
+  });
+  if (!statement) return { error: "Statement not found" };
+  if (statement.transactions.length === 0) {
+    return { error: "Add transactions before syncing totals" };
+  }
+
+  const totals = summarizeTransactions(statement.transactions);
+  const endingBalance = computeEndingBalance(statement.previousBalance, totals);
+
+  await prisma.monthlyStatement.update({
+    where: { id: statementId },
+    data: { ...totals, endingBalance },
+  });
+
+  if (await isLatestStatement(statement.creditCardId, statementId)) {
+    await prisma.creditCard.update({
+      where: { id: statement.creditCardId },
+      data: { currentBalance: endingBalance },
+    });
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath(`/cards/${statement.creditCardId}`);
+  return { success: true };
+}
+
+async function getOwnedStatement(id: string, userId: string) {
+  return prisma.monthlyStatement.findFirst({
+    where: { id, creditCard: { userId } },
+  });
+}
+
+async function isLatestStatement(creditCardId: string, statementId: string) {
+  const latest = await prisma.monthlyStatement.findFirst({
+    where: { creditCardId },
+    orderBy: [{ year: "desc" }, { month: "desc" }],
+    select: { id: true },
+  });
+  return latest?.id === statementId;
+}
+
+// --- Transactions ---
+
+async function getOwnedTransaction(id: string, userId: string) {
+  return prisma.transaction.findFirst({
+    where: { id, statement: { creditCard: { userId } } },
+    include: { statement: { select: { creditCardId: true } } },
+  });
+}
+
+export async function createTransaction(data: Record<string, unknown>) {
+  const userId = await getUserId();
+  const parsed = transactionSchema.safeParse(data);
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const statement = await getOwnedStatement(parsed.data.statementId, userId);
+  if (!statement) return { error: "Statement not found" };
+
+  const { amount, ...fields } = parsed.data;
+  await prisma.transaction.create({
+    data: { ...fields, amount: toSignedAmount(amount, fields.type) },
+  });
+
+  revalidatePath(`/cards/${statement.creditCardId}`);
+  return { success: true };
+}
+
+export async function updateTransaction(id: string, data: Record<string, unknown>) {
+  const userId = await getUserId();
+  const parsed = transactionUpdateSchema.safeParse(data);
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const transaction = await getOwnedTransaction(id, userId);
+  if (!transaction) return { error: "Transaction not found" };
+
+  const { amount, ...fields } = parsed.data;
+  await prisma.transaction.update({
+    where: { id },
+    data: { ...fields, amount: toSignedAmount(amount, fields.type) },
+  });
+
+  revalidatePath(`/cards/${transaction.statement.creditCardId}`);
+  return { success: true };
+}
+
+export async function deleteTransaction(id: string) {
+  const userId = await getUserId();
+  const transaction = await getOwnedTransaction(id, userId);
+  if (!transaction) return { error: "Transaction not found" };
+
+  await prisma.transaction.delete({ where: { id } });
+
+  revalidatePath(`/cards/${transaction.statement.creditCardId}`);
+  return { success: true };
 }

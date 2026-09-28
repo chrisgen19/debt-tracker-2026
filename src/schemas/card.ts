@@ -39,6 +39,42 @@ export const statementSchema = z.object({
   notes: z.string().optional(),
 });
 
+export const TRANSACTION_TYPES = ["purchase", "payment", "interest", "fee"] as const;
+
+// Amount is always entered as a positive number; the server applies the sign from `type`
+const transactionFields = z.object({
+  date: z.coerce.date({ error: "Enter a valid date" }),
+  postDate: z.coerce.date({ error: "Enter a valid post date" }),
+  description: z
+    .string()
+    .trim()
+    .min(1, "Description is required")
+    .max(200, "Description must be 200 characters or less"),
+  amount: z.coerce.number().positive("Amount must be greater than 0"),
+  type: z.enum(TRANSACTION_TYPES),
+});
+
+const postDateNotBeforeDate = (data: { date: Date; postDate: Date }) =>
+  data.postDate >= data.date;
+
+const postDateIssue = {
+  message: "Post date can't be before the transaction date",
+  path: ["postDate"],
+};
+
+export const transactionUpdateSchema = transactionFields.refine(
+  postDateNotBeforeDate,
+  postDateIssue
+);
+
+export const transactionSchema = transactionFields
+  .extend({ statementId: z.string().min(1, "Statement is required") })
+  .refine(postDateNotBeforeDate, postDateIssue);
+
 export type CreditCardInput = z.infer<typeof creditCardSchema>;
 export type OverrideInput = z.infer<typeof overrideSchema>;
 export type StatementInput = z.infer<typeof statementSchema>;
+export type TransactionType = (typeof TRANSACTION_TYPES)[number];
+export type TransactionInput = z.infer<typeof transactionSchema>;
+export type TransactionFormValues = z.input<typeof transactionUpdateSchema>;
+export type TransactionUpdateInput = z.output<typeof transactionUpdateSchema>;

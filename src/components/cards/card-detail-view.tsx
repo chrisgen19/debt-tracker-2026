@@ -19,29 +19,12 @@ import {
 import { updateCard, saveOverride, clearOverrides, deleteCard } from "@/lib/actions";
 import { StatementHistory } from "@/components/cards/statement-history";
 import { RecordStatementDialog } from "@/components/cards/record-statement-dialog";
+import type { StatementWithTransactions } from "@/types/statement";
 
 interface Override {
   monthNumber: number;
   payment: number | null;
   purchases: number | null;
-}
-
-interface Statement {
-  id: string;
-  month: number;
-  year: number;
-  previousBalance: number;
-  payments: number;
-  purchases: number;
-  interestCharged: number;
-  fees: number;
-  endingBalance: number;
-  minimumDue: number;
-  isPaid: boolean;
-  amountPaid: number;
-  statementDate: Date;
-  dueDate: Date;
-  notes: string | null;
 }
 
 interface CardData {
@@ -56,7 +39,7 @@ interface CardData {
   targetPayment: number;
   color: string;
   overrides: Override[];
-  statements: Statement[];
+  statements: StatementWithTransactions[];
 }
 
 interface CardDetailViewProps {
@@ -331,7 +314,7 @@ export function CardDetailView({ card }: CardDetailViewProps) {
 
       {/* Statement History */}
       {card.statements.length > 0 && (
-        <StatementHistory statements={card.statements} cardColor={card.color} />
+        <StatementHistory statements={card.statements} card={card} />
       )}
 
       {/* Interactive Ledger */}

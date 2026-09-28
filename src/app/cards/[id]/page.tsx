@@ -17,7 +17,12 @@ export default async function CardDetailPage({ params }: PageProps) {
     where: { id, userId: session.user.id },
     include: {
       overrides: { orderBy: { monthNumber: "asc" } },
-      statements: { orderBy: [{ year: "desc" }, { month: "desc" }] },
+      statements: {
+        orderBy: [{ year: "desc" }, { month: "desc" }],
+        include: {
+          transactions: { orderBy: [{ date: "asc" }, { createdAt: "asc" }] },
+        },
+      },
     },
   });
 

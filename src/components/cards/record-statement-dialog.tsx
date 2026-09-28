@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { X, Loader2, Save } from "lucide-react";
 import { saveStatement } from "@/lib/actions";
+import type { StatementWithTransactions } from "@/types/statement";
 
 interface CardInfo {
   id: string;
@@ -12,26 +13,34 @@ interface CardInfo {
 
 interface RecordStatementDialogProps {
   card: CardInfo;
+  /** When provided, the dialog edits this statement instead of recording a new one */
+  statement?: StatementWithTransactions;
   onClose: () => void;
 }
 
-export function RecordStatementDialog({ card, onClose }: RecordStatementDialogProps) {
+const initialValue = (value: number | undefined, fallback = "") =>
+  value === undefined ? fallback : value.toString();
+
+export function RecordStatementDialog({ card, statement, onClose }: RecordStatementDialogProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
+  const isEdit = statement !== undefined;
 
   const now = new Date();
-  const [month, setMonth] = useState(now.getMonth() + 1);
-  const [year, setYear] = useState(now.getFullYear());
-  const [previousBalance, setPreviousBalance] = useState(card.currentBalance.toString());
-  const [payments, setPayments] = useState("");
-  const [purchases, setPurchases] = useState("");
-  const [interestCharged, setInterestCharged] = useState("");
-  const [fees, setFees] = useState("0");
-  const [endingBalance, setEndingBalance] = useState("");
-  const [minimumDue, setMinimumDue] = useState("");
-  const [isPaid, setIsPaid] = useState(false);
-  const [amountPaid, setAmountPaid] = useState("");
-  const [notes, setNotes] = useState("");
+  const [month, setMonth] = useState(statement?.month ?? now.getMonth() + 1);
+  const [year, setYear] = useState(statement?.year ?? now.getFullYear());
+  const [previousBalance, setPreviousBalance] = useState(
+    (statement?.previousBalance ?? card.currentBalance).toString()
+  );
+  const [payments, setPayments] = useState(initialValue(statement?.payments));
+  const [purchases, setPurchases] = useState(initialValue(statement?.purchases));
+  const [interestCharged, setInterestCharged] = useState(initialValue(statement?.interestCharged));
+  const [fees, setFees] = useState(initialValue(statement?.fees, "0"));
+  const [endingBalance, setEndingBalance] = useState(initialValue(statement?.endingBalance));
+  const [minimumDue, setMinimumDue] = useState(initialValue(statement?.minimumDue));
+  const [isPaid, setIsPaid] = useState(statement?.isPaid ?? false);
+  const [amountPaid, setAmountPaid] = useState(initialValue(statement?.amountPaid));
+  const [notes, setNotes] = useState(statement?.notes ?? "");
 
   function handleSubmit() {
     setError("");
@@ -40,8 +49,9 @@ export function RecordStatementDialog({ card, onClose }: RecordStatementDialogPr
         creditCardId: card.id,
         month,
         year,
-        statementDate: new Date(year, month - 1, 9),
-        dueDate: new Date(year, month, 2),
+        // Keep the recorded dates when editing; new statements use the default cycle days
+        statementDate: statement?.statementDate ?? new Date(year, month - 1, 9),
+        dueDate: statement?.dueDate ?? new Date(year, month, 2),
         previousBalance: Number(previousBalance),
         payments: Number(payments) || 0,
         purchases: Number(purchases) || 0,
@@ -66,7 +76,9 @@ export function RecordStatementDialog({ card, onClose }: RecordStatementDialogPr
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="bg-white rounded-3xl shadow-xl max-w-lg w-full p-8 animate-slide-up max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-slate-900">Record Statement</h2>
+          <h2 className="text-xl font-bold text-slate-900">
+            {isEdit ? "Edit Statement" : "Record Statement"}
+          </h2>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
             <X size={20} />
           </button>
@@ -82,10 +94,12 @@ export function RecordStatementDialog({ card, onClose }: RecordStatementDialogPr
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Month</label>
+              {/* Period is locked when editing: saveStatement upserts on card + month + year */}
               <select
                 value={month}
                 onChange={(e) => setMonth(Number(e.target.value))}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                disabled={isEdit}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {Array.from({ length: 12 }, (_, i) => (
                   <option key={i + 1} value={i + 1}>
@@ -100,7 +114,8 @@ export function RecordStatementDialog({ card, onClose }: RecordStatementDialogPr
                 type="number"
                 value={year}
                 onChange={(e) => setYear(Number(e.target.value))}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                disabled={isEdit}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
           </div>
@@ -187,7 +202,7 @@ export function RecordStatementDialog({ card, onClose }: RecordStatementDialogPr
             className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isPending ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-            Save Statement
+            {isEdit ? "Save Changes" : "Save Statement"}
           </button>
         </div>
       </div>
